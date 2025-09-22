@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Каталог тренажерів</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl bg-white rounded-xl shadow-lg p-6 md:p-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2 text-center">Каталог силових тренажерів</h1>
+        <p class="text-gray-500 mb-6 text-center">Знайдіть тренажер за номером або назвою.</p>
+
+        <!-- Search Input -->
+        <div class="relative mb-6">
+            <input type="text" id="searchInput" placeholder="Введіть номер або назву тренажера..."
+                   class="w-full p-3 pl-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+            </svg>
+        </div>
+
+        <!-- Results Container -->
+        <div id="resultsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Items will be injected here by JavaScript -->
+        </div>
+
+        <!-- No Results Message -->
+        <div id="noResults" class="hidden text-center text-gray-500 mt-8">
+            <p class="text-lg font-medium">Тренажер не знайдено.</p>
+            <p class="text-sm">Спробуйте інший номер або назву.</p>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const noResultsMessage = document.getElementById('noResults');
+
+        // Функція для відображення елементів каталогу
+        function renderResults(items) {
+            resultsContainer.innerHTML = '';
+            if (items.length === 0) {
+                noResultsMessage.classList.remove('hidden');
+                return;
+            } else {
+                noResultsMessage.classList.add('hidden');
+            }
+
+            items.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = "bg-white p-4 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300";
+
+                const photosHtml = item.photos.map(photo => `
+                    <div>
+                        <img src="${photo.url}" alt="${item.name}" class="w-full h-auto rounded-md mb-1 object-cover">
+                        <p class="text-sm text-gray-500 text-center">${photo.caption}</p>
+                    </div>
+                `).join('');
+
+                itemDiv.innerHTML = `
+                    <div class="mb-4">
+                        <span class="inline-block bg-indigo-500 text-white text-xs font-bold px-2 py-1 rounded-full mb-2">№ ${item.number}</span>
+                        <h2 class="text-lg font-semibold text-gray-800">${item.name}</h2>
+                    </div>
+                    ${photosHtml}
+                `;
+                resultsContainer.appendChild(itemDiv);
+            });
+        }
+
+        // Функція пошуку
+        function handleSearch() {
+            const query = searchInput.value.toLowerCase().trim();
+            const filteredItems = gymData.filter(item =>
+                item.number.toLowerCase().includes(query) ||
+                item.name.toLowerCase().includes(query)
+            );
+            renderResults(filteredItems);
+        }
+
+        // Початкове відображення всіх елементів
+        window.onload = function() {
+            renderResults(gymData);
+            searchInput.addEventListener('input', handleSearch);
+        };
+    </script>
+</body>
+</html>
