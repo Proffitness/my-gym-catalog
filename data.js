@@ -24,8 +24,9 @@ const gymData = [
             { url: "./images/3/technogym-artis-chest-press-01.jpg" },
             { url: "./images/3/technogym-artis-chest-press-02.jpg" },
             { url: "./images/3/technogym-artis-chest-press-03.jpg" },
-            { url: "./images/3/technogym-artis-chest-press-03.jpg" },
+            { url: "./images/3/technogym-artis-chest-press-04.jpg" },
         ]
     }
 ]
+
 
