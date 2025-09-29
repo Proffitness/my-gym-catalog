@@ -39,14 +39,12 @@
             <h1 class="text-2xl font-bold text-center mb-2">Вхід до каталогу</h1>
             <p class="text-center text-gray-600 mb-6">Введіть ваш номер телефону для автентифікації.</p>
             
-            <!-- Форма для номеру телефону -->
             <div id="phone-form">
                 <label for="phone-number" class="block text-sm font-medium text-gray-700">Номер телефону</label>
                 <input type="tel" id="phone-number" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="+380991234567">
                 <button id="send-code-btn" class="mt-4 w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Надіслати код</button>
             </div>
 
-            <!-- Форма для коду підтвердження -->
             <div id="code-form" class="hidden">
                  <p id="code-sent-message" class="mb-4 text-center text-green-600 text-sm"></p>
                 <label for="verification-code" class="block text-sm font-medium text-gray-700">Код з SMS</label>
@@ -76,14 +74,13 @@
     </div>
 
     <!-- Підключення Firebase SDK -->
+    <!-- *** ВИПРАВЛЕНО: Версію відкочено до 9.23.0 для стабільності *** -->
     <script type="module">
-        // *** ВИПРАВЛЕНО: Оновлено версії бібліотек для сумісності ***
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
         // --- ПОЧАТОК КОНФІГУРАЦІЇ ---
-
         const firebaseConfig = {
             apiKey: "AIzaSyBEESA6qosTRB4m01WXBjyEJL_SJlfP-mo",
             authDomain: "proffitness-gym-catalog.firebaseapp.com",
@@ -94,7 +91,6 @@
         };
         
         const allowedPhoneNumbers = ['+380503922270', '+380666520034']; 
-
         // --- КІНЕЦЬ КОНФІГУРАЦІЇ ---
 
         const app = initializeApp(firebaseConfig);
@@ -117,13 +113,14 @@
         const logoutBtn = document.getElementById('logout-btn');
 
         function setupRecaptcha() {
+            auth.useDeviceLanguage();
             if (window.recaptchaVerifier) {
                 window.recaptchaVerifier.clear();
             }
-            window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            window.recaptchaVerifier = new RecaptchaVerifier('recaptcha-container', {
                 'size': 'invisible',
                 'callback': (response) => {}
-            });
+            }, auth);
         }
 
         sendCodeBtn.addEventListener('click', () => {
@@ -144,7 +141,7 @@
                     codeSentMessage.textContent = `Код підтвердження надіслано на номер ${phoneNumber}.`;
                 }).catch((error) => {
                     console.error("Помилка відправки SMS:", error);
-                    loginError.textContent = 'Помилка відправки коду. Перевірте номер або спробуйте пізніше.';
+                    loginError.textContent = 'Помилка відправки коду. Перевірте консоль (F12) для деталей.';
                     setupRecaptcha();
                 });
         });
@@ -228,12 +225,8 @@
             }).join('');
             trainersGrid.innerHTML = trainersHTML;
         }
-
     </script>
 </body>
 </html>
-
-
-
 
 
