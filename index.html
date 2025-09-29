@@ -2,7 +2,6 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <!-- *** ФІНАЛЬНЕ ВИПРАВЛЕННЯ: Оновлено Політику Безпеки Контенту (CSP) *** -->
     <meta http-equiv="Content-Security-Policy" content="
         script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://www.gstatic.com https://www.google.com https://recaptcha.net; 
         frame-src 'self' https://www.google.com https://recaptcha.net; 
@@ -67,8 +66,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
         import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
         import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app-check.js";
-
+        
         // --- ПОЧАТОК КОНФІГУРАЦІЇ ---
 
         const firebaseConfig = {
@@ -81,23 +79,10 @@
         };
         
         const allowedPhoneNumbers = ['+380503922270', '+380666520034']; 
-        
-        // Ключ reCAPTCHA додано
-        window.RECAPTCHA_SITE_KEY = '6Ldt5dgrAAAAAOiKND2FLMJ1jfEPFU4b5Iirm8vA';
 
         // --- КІНЕЦЬ КОНФІГУРАЦІЇ ---
 
         const app = initializeApp(firebaseConfig);
-        
-        if (window.RECAPTCHA_SITE_KEY && !window.RECAPTCHA_SITE_KEY.includes('!!!')) {
-            initializeAppCheck(app, {
-                provider: new ReCaptchaV3Provider(window.RECAPTCHA_SITE_KEY),
-                isTokenAutoRefreshEnabled: true
-            });
-        } else {
-             console.error('Ключ reCAPTCHA не встановлено! Будь ласка, додайте його до файлу index.html.');
-        }
-
         const auth = getAuth(app);
         const db = getFirestore(app);
 
