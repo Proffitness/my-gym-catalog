@@ -48,6 +48,7 @@
 
             <!-- Форма для коду підтвердження -->
             <div id="code-form" class="hidden">
+                 <p id="code-sent-message" class="mb-4 text-center text-green-600 text-sm"></p>
                 <label for="verification-code" class="block text-sm font-medium text-gray-700">Код з SMS</label>
                 <input type="text" id="verification-code" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="123456">
                 <button id="verify-code-btn" class="mt-4 w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Підтвердити</button>
@@ -114,6 +115,7 @@
         
         const phoneForm = document.getElementById('phone-form');
         const codeForm = document.getElementById('code-form');
+        const codeSentMessage = document.getElementById('code-sent-message');
         
         const phoneNumberInput = document.getElementById('phone-number');
         const sendCodeBtn = document.getElementById('send-code-btn');
@@ -125,6 +127,9 @@
         
         // Створюємо reCAPTCHA верифікатор
         function setupRecaptcha() {
+            if (window.recaptchaVerifier) {
+                window.recaptchaVerifier.clear();
+            }
             window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
                 'size': 'invisible',
                 'callback': (response) => {
@@ -148,13 +153,13 @@
                     window.confirmationResult = confirmationResult;
                     phoneForm.classList.add('hidden');
                     codeForm.classList.remove('hidden');
-                    alert('Код підтвердження надіслано на ваш номер.');
+                    // *** ВИПРАВЛЕНО: Замість alert використовуємо текстове повідомлення ***
+                    codeSentMessage.textContent = `Код підтвердження надіслано на номер ${phoneNumber}.`;
                 }).catch((error) => {
                     console.error("Помилка відправки SMS:", error);
                     loginError.textContent = 'Помилка відправки коду. Перевірте номер або спробуйте пізніше.';
-                    window.recaptchaVerifier.render().then(widgetId => {
-                         grecaptcha.reset(widgetId);
-                    });
+                    // Перезапускаємо reCAPTCHA у випадку помилки
+                    setupRecaptcha();
                 });
         });
 
@@ -188,11 +193,7 @@
                 loginSection.classList.remove('hidden');
                 catalogSection.classList.add('hidden');
                 trainersGrid.innerHTML = ''; // Очищуємо каталог при виході
-                if (window.recaptchaVerifier) {
-                    // Якщо reCAPTCHA вже є, не створюємо нову
-                } else {
-                    setupRecaptcha();
-                }
+                setupRecaptcha(); // Налаштовуємо reCAPTCHA для наступного входу
             }
         });
 
@@ -250,5 +251,4 @@
 </body>
 </html>
 
-</html>
 
