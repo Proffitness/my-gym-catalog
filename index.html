@@ -2,30 +2,24 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
+    <!-- *** ВИПРАВЛЕНО: Додано Політику Безпеки Контенту (CSP) *** -->
+    <meta http-equiv="Content-Security-Policy" content="
+        script-src 'self' https://cdn.tailwindcss.com https://www.gstatic.com https://www.google.com https://recaptcha.net; 
+        frame-src 'self' https://www.google.com https://recaptcha.net; 
+        connect-src 'self' https://identitytoolkit.googleapis.com;
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' https://placehold.co data:;
+    ">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Каталог тренажерів</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .card {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-        }
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-        .loader {
-            border: 8px solid #f3f3f3;
-            border-top: 8px solid #3498db;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        .card { transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .loader { border: 8px solid #f3f3f3; border-top: 8px solid #3498db; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -95,7 +89,6 @@
 
         const app = initializeApp(firebaseConfig);
         
-        // Ініціалізація App Check
         if (window.RECAPTCHA_SITE_KEY && !window.RECAPTCHA_SITE_KEY.includes('!!!')) {
             initializeAppCheck(app, {
                 provider: new ReCaptchaV3Provider(window.RECAPTCHA_SITE_KEY),
@@ -108,7 +101,6 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // UI елементи
         const loginSection = document.getElementById('login-section');
         const catalogSection = document.getElementById('catalog-section');
         const loader = document.getElementById('loader');
@@ -237,6 +229,3 @@
     </script>
 </body>
 </html>
-
-
-
