@@ -77,14 +77,13 @@
 
     <!-- Підключення Firebase SDK -->
     <script type="module">
-        // Імпорт необхідних функцій з Firebase SDK
+        // *** ВИПРАВЛЕНО: Оновлено версії бібліотек для сумісності ***
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- ПОЧАТОК КОНФІГУРАЦІЇ ---
 
-        // !!! ВСТАВТЕ СЮДИ ВАШ firebaseConfig З КРОКУ 2 !!!
         const firebaseConfig = {
             apiKey: "AIzaSyBEESA6qosTRB4m01WXBjyEJL_SJlfP-mo",
             authDomain: "proffitness-gym-catalog.firebaseapp.com",
@@ -94,14 +93,10 @@
             appId: "1:1039559511733:web:8d3eeb9faa917b7e10b8fc"
         };
         
-        // !!! ВКАЖІТЬ ДОЗВОЛЕНІ НОМЕРИ ТЕЛЕФОНІВ ПРАЦІВНИКІВ !!!
-        // Використовуйте міжнародний формат, наприклад: '+380991234567'
         const allowedPhoneNumbers = ['+380503922270', '+380666520034']; 
 
         // --- КІНЕЦЬ КОНФІГУРАЦІЇ ---
 
-
-        // Ініціалізація Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -112,19 +107,15 @@
         const loader = document.getElementById('loader');
         const trainersGrid = document.getElementById('trainers-grid');
         const loginError = document.getElementById('login-error');
-        
         const phoneForm = document.getElementById('phone-form');
         const codeForm = document.getElementById('code-form');
         const codeSentMessage = document.getElementById('code-sent-message');
-        
         const phoneNumberInput = document.getElementById('phone-number');
         const sendCodeBtn = document.getElementById('send-code-btn');
         const verificationCodeInput = document.getElementById('verification-code');
         const verifyCodeBtn = document.getElementById('verify-code-btn');
         const logoutBtn = document.getElementById('logout-btn');
 
-        // Логіка автентифікації
-        
         function setupRecaptcha() {
             if (window.recaptchaVerifier) {
                 window.recaptchaVerifier.clear();
@@ -150,7 +141,6 @@
                     window.confirmationResult = confirmationResult;
                     phoneForm.classList.add('hidden');
                     codeForm.classList.remove('hidden');
-                    // *** ВИПРАВЛЕНО: Замість alert використовуємо текстове повідомлення ***
                     codeSentMessage.textContent = `Код підтвердження надіслано на номер ${phoneNumber}.`;
                 }).catch((error) => {
                     console.error("Помилка відправки SMS:", error);
@@ -242,6 +232,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
