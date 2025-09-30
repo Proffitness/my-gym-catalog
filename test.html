@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Діагностика входу</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div class="w-full max-w-sm bg-white rounded-lg shadow-md p-8">
+        <h1 class="text-xl font-bold text-center mb-4">Тестовий вхід</h1>
+        
+        <div id="phone-form">
+            <label for="phone-number" class="block text-sm font-medium text-gray-700">Номер телефону</label>
+            <input type="tel" id="phone-number" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="+380503922270">
+            <button id="send-code-btn" class="mt-4 w-full bg-blue-600 text-white py-2 rounded-md">Надіслати код</button>
+        </div>
+
+        <div id="code-form" class="hidden">
+             <p id="code-sent-message" class="mb-4 text-center text-green-600 text-sm"></p>
+            <label for="verification-code" class="block text-sm font-medium text-gray-700">Код з SMS</label>
+            <input type="text" id="verification-code" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="123456">
+            <button id="verify-code-btn" class="mt-4 w-full bg-green-600 text-white py-2 rounded-md">Підтвердити</button>
+        </div>
+        
+        <p id="status-message" class="mt-4 text-center text-sm font-medium"></p>
+        <div id="recaptcha-container" class="mt-4"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyBEESA6qosTRB4m01WXBjyEJL_SJlfP-mo",
+            authDomain: "proffitness-gym-catalog.firebaseapp.com",
+            projectId: "proffitness-gym-catalog",
+            storageBucket: "proffitness-gym-catalog.firebasestorage.app",
+            messagingSenderId: "1039559511733",
+            appId: "1:1039559511733:web:8d3eeb9faa917b7e10b8fc"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        const statusMessage = document.getElementById('status-message');
+        const phoneForm = document.getElementById('phone-form');
+        const codeForm = document.getElementById('code-form');
+        const codeSentMessage = document.getElementById('code-sent-message');
+        const phoneNumberInput = document.getElementById('phone-number');
+        const sendCodeBtn = document.getElementById('send-code-btn');
+        const verificationCodeInput = document.getElementById('verification-code');
+        const verifyCodeBtn = document.getElementById('verify-code-btn');
+
+        function setupRecaptcha() {
+            if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
+            window.recaptchaVerifier = new RecaptchaVerifier('recaptcha-container', { 'size': 'invisible' }, auth);
+        }
+
+        sendCodeBtn.addEventListener('click', () => {
+            const phoneNumber = phoneNumberInput.value;
+            statusMessage.textContent = 'Відправка запиту...';
+            
+            signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier)
+                .then(confirmationResult => {
+                    window.confirmationResult = confirmationResult;
+                    phoneForm.classList.add('hidden');
+                    codeForm.classList.remove('hidden');
+                    statusMessage.textContent = '';
+                    codeSentMessage.textContent = `Код надіслано на ${phoneNumber}.`;
+                }).catch(error => {
+                    console.error("Помилка:", error);
+                    statusMessage.textContent = 'Помилка. Дивіться консоль (F12).';
+                    setupRecaptcha();
+                });
+        });
+
+        verifyCodeBtn.addEventListener('click', () => {
+            const code = verificationCodeInput.value;
+            if (!window.confirmationResult) return;
+            
+            window.confirmationResult.confirm(code).then(result => {
+                statusMessage.textContent = `Вхід успішний! Користувач: ${result.user.phoneNumber}`;
+                statusMessage.classList.remove('text-red-600');
+                statusMessage.classList.add('text-green-600');
+            }).catch(error => {
+                statusMessage.textContent = 'Неправильний код.';
+                statusMessage.classList.add('text-red-600');
+            });
+        });
+
+        onAuthStateChanged(auth, user => {
+            if (!user) {
+                setupRecaptcha();
+            }
+        });
+    </script>
+</body>
+</html>
