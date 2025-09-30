@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <!-- *** ФІНАЛЬНЕ ВИПРАВЛЕННЯ: Додано дозвіл для connect-src *** -->
+    <!-- *** ФІНАЛЬНЕ ВИПРАВЛЕННЯ: Додано https://www.google.com до директиви connect-src *** -->
     <meta http-equiv="Content-Security-Policy" content="
         script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://www.gstatic.com https://www.google.com https://recaptcha.net; 
         frame-src 'self' https://www.google.com https://recaptcha.net; 
@@ -13,6 +13,8 @@
     ">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Каталог тренажерів</title>
+    <!-- *** ДОДАНО: Стандартна іконка, щоб прибрати помилку 404 *** -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💪</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -79,8 +81,7 @@
             appId: "1:1039559511733:web:8d3eeb9faa917b7e10b8fc"
         };
         
-        // ВАЖЛИВО: Переконайтесь, що тут є і реальні, і тестовий номери
-        const allowedPhoneNumbers = ['+380503922270', '+380666520034', '+16505551234']; 
+        const allowedPhoneNumbers = ['+380503922270', '+380666520034']; 
 
         // --- КІНЕЦЬ КОНФІГУРАЦІЇ ---
 
@@ -130,7 +131,7 @@
                 }).catch((error) => {
                     console.error("Помилка відправки SMS:", error);
                     loginError.textContent = 'Помилка відправки коду. Перевірте консоль (F12) для деталей.';
-                    setupRecaptcha(); // Скидаємо reCAPTCHA у випадку помилки
+                    setupRecaptcha();
                 });
         });
 
@@ -216,6 +217,7 @@
     </script>
 </body>
 </html>
+
 
 
 
