@@ -2,10 +2,11 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
+    <!-- *** ФІНАЛЬНЕ ВИПРАВЛЕННЯ: Додано дозвіл для connect-src *** -->
     <meta http-equiv="Content-Security-Policy" content="
         script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://www.gstatic.com https://www.google.com https://recaptcha.net; 
         frame-src 'self' https://www.google.com https://recaptcha.net; 
-        connect-src 'self' https://identitytoolkit.googleapis.com;
+        connect-src 'self' https://identitytoolkit.googleapis.com https://www.google.com;
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
         font-src 'self' https://fonts.gstatic.com;
         img-src 'self' https://placehold.co data:;
@@ -214,4 +215,6 @@
     </script>
 </body>
 </html>
+
+
 
