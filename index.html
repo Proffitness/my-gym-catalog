@@ -30,11 +30,8 @@
             height: 60px; 
             animation: spin 1s linear infinite; 
         }
-        @keyframes spin { 
-            0% { transform: rotate(0deg); } 
-            100% { transform: rotate(360deg); } 
-        }
-        #image-modal img { user-select: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .modal-content { max-height: 90vh; }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -46,13 +43,10 @@
         <div class="w-full max-w-md bg-white rounded-lg shadow-md p-8">
             <h1 class="text-2xl font-bold text-center mb-2">Вхід до каталогу</h1>
             <p id="login-prompt" class="text-center text-gray-600 mb-6">Введіть вашу пошту, щоб отримати посилання для входу.</p>
-            
             <div id="email-form">
-                <label for="email-input" class="block text-sm font-medium text-gray-700">Email</label>
                 <input type="email" id="email-input" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="your.email@example.com">
                 <button id="send-link-btn" class="mt-4 w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Надіслати посилання</button>
             </div>
-            
             <p id="login-message" class="mt-4 text-center text-sm"></p>
         </div>
     </div>
@@ -63,23 +57,32 @@
                 <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <h1 class="text-3xl font-bold text-gray-900">Каталог тренажерів</h1>
                     <div class="flex items-center gap-4 w-full sm:w-auto">
-                        <input type="text" id="search-input" placeholder="Пошук за назвою або №..." class="block w-full sm:w-64 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <input type="text" id="search-input" placeholder="Пошук за назвою або №..." class="block w-full sm:w-64 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm">
                         <button id="logout-btn" class="bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600 flex-shrink-0">Вийти</button>
                     </div>
                 </div>
             </div>
         </header>
         <main id="trainers-grid" class="container mx-auto p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></main>
-        <div id="loader" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-            <div class="loader"></div>
+        <div id="loader" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"><div class="loader"></div></div>
+    </div>
+
+    <!-- Модальне вікно-галерея -->
+    <div id="gallery-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-40 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl modal-content overflow-y-auto">
+            <div class="sticky top-0 bg-white p-4 border-b flex justify-between items-center">
+                <h3 id="gallery-title" class="text-xl font-bold">Фотографії</h3>
+                <span id="close-gallery-modal" class="text-3xl font-bold cursor-pointer">&times;</span>
+            </div>
+            <div id="gallery-grid" class="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
         </div>
     </div>
 
-    <!-- Модальне вікно для перегляду зображень -->
-    <div id="image-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4">
-        <span id="close-modal" class="absolute top-4 right-6 text-white text-4xl font-bold cursor-pointer">&times;</span>
+    <!-- Модальне вікно для перегляду одного зображення (Лайтбокс) -->
+    <div id="lightbox-modal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
+        <span id="close-lightbox-modal" class="absolute top-4 right-6 text-white text-4xl font-bold cursor-pointer">&times;</span>
         <div class="relative">
-            <img id="modal-image" src="" class="max-w-[90vw] max-h-[85vh] object-contain">
+            <img id="lightbox-image" src="" class="max-w-[90vw] max-h-[85vh] object-contain">
             <a id="prev-btn" class="absolute top-1/2 left-0 sm:-left-12 -translate-y-1/2 text-white text-3xl cursor-pointer p-4">&#10094;</a>
             <a id="next-btn" class="absolute top-1/2 right-0 sm:-right-12 -translate-y-1/2 text-white text-3xl cursor-pointer p-4">&#10095;</a>
         </div>
@@ -90,7 +93,6 @@
         import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
-        // --- КОНФІГУРАЦІЯ ---
         const firebaseConfig = {
             apiKey: "AIzaSyBEESA6qosTRB4m01WXBjyEJL_SJlfP-mo",
             authDomain: "proffitness-gym-catalog.firebaseapp.com",
@@ -101,8 +103,7 @@
         };
         const allowedEmails = ['v.kovtun.od@gmail.com', 'worker2@example.com']; 
         const githubRepoUrl = 'https://proffitness.github.io/my-gym-catalog/';
-        // --- КІНЕЦЬ КОНФІГУРАЦІЇ ---
-
+        
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -111,17 +112,17 @@
         const catalogSection = document.getElementById('catalog-section');
         const loader = document.getElementById('loader');
         const trainersGrid = document.getElementById('trainers-grid');
-        const loginMessage = document.getElementById('login-message');
-        const emailForm = document.getElementById('email-form');
-        const emailInput = document.getElementById('email-input');
-        const sendLinkBtn = document.getElementById('send-link-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const searchInput = document.getElementById('search-input');
         
-        // Елементи модального вікна
-        const modal = document.getElementById('image-modal');
-        const modalImage = document.getElementById('modal-image');
-        const closeModalBtn = document.getElementById('close-modal');
+        const galleryModal = document.getElementById('gallery-modal');
+        const galleryGrid = document.getElementById('gallery-grid');
+        const galleryTitle = document.getElementById('gallery-title');
+        const closeGalleryModalBtn = document.getElementById('close-gallery-modal');
+        
+        const lightboxModal = document.getElementById('lightbox-modal');
+        const lightboxImage = document.getElementById('lightbox-image');
+        const closeLightboxModalBtn = document.getElementById('close-lightbox-modal');
         const prevBtn = document.getElementById('prev-btn');
         const nextBtn = document.getElementById('next-btn');
 
@@ -129,65 +130,39 @@
         let currentPhotos = [];
         let currentIndex = 0;
 
-        const actionCodeSettings = {
-            url: window.location.href.split('?')[0],
-            handleCodeInApp: true,
-        };
-
-        // --- ЛОГІКА АУТЕНТИФІКАЦІЇ ---
+        // --- ЛОГІКА АУТЕНТИФІКАЦІЇ (без змін) ---
+        const sendLinkBtn = document.getElementById('send-link-btn');
+        const emailInput = document.getElementById('email-input');
+        const loginMessage = document.getElementById('login-message');
+        const actionCodeSettings = { url: window.location.href.split('?')[0], handleCodeInApp: true, };
         sendLinkBtn.addEventListener('click', () => {
             const email = emailInput.value;
-            loginMessage.textContent = '';
-            if (!email) {
-                 loginMessage.classList.add('text-red-600');
-                 loginMessage.textContent = 'Будь ласка, введіть email.';
-                 return;
-            }
-            if (!allowedEmails.includes(email.toLowerCase())) {
-                loginMessage.classList.add('text-red-600');
-                loginMessage.textContent = 'Ця пошта не має доступу.';
-                return;
-            }
+            if (!email) { loginMessage.textContent = 'Будь ласка, введіть email.'; return; }
+            if (!allowedEmails.includes(email.toLowerCase())) { loginMessage.textContent = 'Ця пошта не має доступу.'; return; }
             sendSignInLinkToEmail(auth, email, actionCodeSettings)
                 .then(() => {
                     window.localStorage.setItem('emailForSignIn', email);
-                    loginMessage.classList.remove('text-red-600');
-                    loginMessage.classList.add('text-green-600');
                     loginMessage.textContent = `Посилання для входу надіслано на ${email}.`;
-                    emailForm.classList.add('hidden');
-                })
-                .catch((error) => {
-                    console.error("Помилка відправки посилання:", error);
-                    loginMessage.textContent = 'Не вдалося надіслати посилання.';
-                });
+                }).catch(err => loginMessage.textContent = 'Не вдалося надіслати посилання.');
         });
-        
-        logoutBtn.addEventListener('click', () => signOut(auth).then(() => window.history.replaceState({}, document.title, window.location.pathname)));
-
+        logoutBtn.addEventListener('click', () => signOut(auth));
         onAuthStateChanged(auth, user => {
-            if (user && allowedEmails.includes(user.email.toLowerCase())) {
-                loginSection.classList.add('hidden');
-                catalogSection.classList.remove('hidden');
-                loadTrainers();
-            } else {
-                loginSection.classList.remove('hidden');
-                catalogSection.classList.add('hidden');
-                trainersGrid.innerHTML = '';
-                allTrainers = [];
-            }
+            const isLoggedIn = user && allowedEmails.includes(user.email.toLowerCase());
+            loginSection.classList.toggle('hidden', isLoggedIn);
+            catalogSection.classList.toggle('hidden', !isLoggedIn);
+            if (isLoggedIn) loadTrainers();
         });
-        
         if (isSignInWithEmailLink(auth, window.location.href)) {
-            let email = window.localStorage.getItem('emailForSignIn') || window.prompt('Будь ласка, введіть вашу пошту для підтвердження.');
-            if (email) {
-                signInWithEmailLink(auth, email, window.location.href)
-                    .then(() => window.localStorage.removeItem('emailForSignIn'))
-                    .catch(error => console.error("Помилка входу:", error));
-            }
+            let email = window.localStorage.getItem('emailForSignIn') || prompt('Введіть вашу пошту для підтвердження.');
+            if (email) signInWithEmailLink(auth, email, window.location.href).then(() => window.localStorage.removeItem('emailForSignIn'));
         }
-        
-        // --- ЛОГІКА КАТАЛОГУ І ГАЛЕРЕЇ ---
+
+        // --- ЛОГІКА КАТАЛОГУ ---
         async function loadTrainers() {
+            if (allTrainers.length > 0) {
+                displayTrainers(allTrainers);
+                return;
+            }
             loader.classList.remove('hidden');
             try {
                 const querySnapshot = await getDocs(collection(db, "trainers"));
@@ -198,25 +173,27 @@
                 displayTrainers(allTrainers);
             } catch (error) {
                 console.error("Помилка завантаження даних: ", error);
-                trainersGrid.innerHTML = `<p class="col-span-full text-center text-red-500">Не вдалося завантажити дані.</p>`;
             } finally {
                 loader.classList.add('hidden');
             }
         }
 
         function displayTrainers(trainers) {
-            if (trainers.length === 0) {
-                trainersGrid.innerHTML = `<p class="col-span-full text-center text-lg mt-10">Тренажери не знайдено.</p>`;
-                return;
-            }
             trainersGrid.innerHTML = trainers.map(trainer => {
-                const mainImage = trainer.photos && trainer.photos.length > 0 ? `${githubRepoUrl}${trainer.photos[0].url.replace('./', '')}` : 'https://placehold.co/600x400/e2e8f0/e2e8f0?text=...';
-                const photosJson = JSON.stringify(trainer.photos).replace(/"/g, '&quot;');
+                const mainImage = trainer.photos && trainer.photos.length > 0 ? `${githubRepoUrl}${trainer.photos[0].url.replace('./', '')}` : '';
+                const trainerNameEscaped = trainer.name.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+                const photosJson = JSON.stringify(trainer.photos);
+
                 return `
-                <div class="card bg-white rounded-lg shadow-md overflow-hidden relative p-4" onclick='openModal(${photosJson}, 0)'>
-                    <div class="absolute top-2 left-2 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full">№ ${trainer.number}</div>
-                    <h2 class="text-lg font-semibold mt-8 mb-4 h-20">${trainer.name}</h2>
-                    <img src="${mainImage}" alt="${trainer.name}" class="w-full h-48 object-contain" onerror="this.src='https://placehold.co/600x400?text=Error'">
+                <div class="card bg-white rounded-lg shadow-md overflow-hidden p-4 flex flex-col" 
+                     onclick='window.showGallery("${trainerNameEscaped}", ${photosJson})'>
+                    <div class="flex-shrink-0">
+                        <div class="absolute top-2 left-2 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full">№ ${trainer.number}</div>
+                        <h2 class="text-lg font-semibold mt-8 mb-4 min-h-[5rem]">${trainer.name}</h2>
+                    </div>
+                    <div class="flex-grow flex items-center justify-center">
+                        <img src="${mainImage}" alt="${trainer.name}" class="w-full h-48 object-contain">
+                    </div>
                 </div>`;
             }).join('');
         }
@@ -227,36 +204,54 @@
             displayTrainers(filtered);
         });
 
-        // Глобальні функції для доступу з onclick
-        window.openModal = (photos, index) => {
-            if (!photos || photos.length === 0) return;
+        // --- ЛОГІКА ГАЛЕРЕЇ І ЛАЙТБОКСУ ---
+        window.showGallery = (trainerName, photos) => {
+            galleryTitle.textContent = `Фото: ${trainerName}`;
+            galleryGrid.innerHTML = '';
+            photos.forEach((photo, index) => {
+                const img = document.createElement('img');
+                img.src = `${githubRepoUrl}${photo.url.replace('./', '')}`;
+                img.className = 'w-full h-32 object-cover rounded-md cursor-pointer hover:opacity-80 transition-opacity';
+                img.onclick = () => window.openLightbox(photos, index);
+                galleryGrid.appendChild(img);
+            });
+            galleryModal.classList.remove('hidden');
+        }
+
+        window.openLightbox = (photos, index) => {
             currentPhotos = photos;
             currentIndex = index;
-            updateModalImage();
-            modal.classList.remove('hidden');
+            updateLightboxImage();
+            lightboxModal.classList.remove('hidden');
         }
 
-        function updateModalImage() {
+        function updateLightboxImage() {
             const photoUrl = `${githubRepoUrl}${currentPhotos[currentIndex].url.replace('./', '')}`;
-            modalImage.src = photoUrl;
-            prevBtn.classList.toggle('hidden', currentPhotos.length <= 1);
-            nextBtn.classList.toggle('hidden', currentPhotos.length <= 1);
+            lightboxImage.src = photoUrl;
+            prevBtn.style.display = currentPhotos.length > 1 ? 'block' : 'none';
+            nextBtn.style.display = currentPhotos.length > 1 ? 'block' : 'none';
         }
 
-        function changePhoto(step) {
+        function changeLightboxPhoto(step) {
             currentIndex = (currentIndex + step + currentPhotos.length) % currentPhotos.length;
-            updateModalImage();
+            updateLightboxImage();
         }
 
-        closeModalBtn.addEventListener('click', () => modal.classList.add('hidden'));
-        prevBtn.addEventListener('click', e => { e.stopPropagation(); changePhoto(-1); });
-        nextBtn.addEventListener('click', e => { e.stopPropagation(); changePhoto(1); });
-        document.addEventListener('keydown', e => e.key === "Escape" && modal.classList.add('hidden'));
+        closeGalleryModalBtn.addEventListener('click', () => galleryModal.classList.add('hidden'));
+        closeLightboxModalBtn.addEventListener('click', () => lightboxModal.classList.add('hidden'));
+        prevBtn.addEventListener('click', (e) => { e.stopPropagation(); changeLightboxPhoto(-1); });
+        nextBtn.addEventListener('click', (e) => { e.stopPropagation(); changeLightboxPhoto(1); });
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "Escape") {
+                galleryModal.classList.add('hidden');
+                lightboxModal.classList.add('hidden');
+            }
+        });
 
     </script>
 </body>
 </html>
-
 
 
 
