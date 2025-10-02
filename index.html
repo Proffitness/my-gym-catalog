@@ -90,7 +90,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
         const firebaseConfig = {
@@ -107,6 +107,12 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+
+        // --- ЛОГІКА ДЛЯ ЗБЕРЕЖЕННЯ СЕСІЇ ---
+        setPersistence(auth, browserLocalPersistence)
+            .catch((error) => {
+                console.error("Помилка налаштування збереження сесії:", error);
+            });
 
         const loginSection = document.getElementById('login-section');
         const catalogSection = document.getElementById('catalog-section');
@@ -130,7 +136,7 @@
         let currentPhotos = [];
         let currentIndex = 0;
 
-        // --- ЛОГІКА АУТЕНТИФІКАЦІЇ (без змін) ---
+        // --- ЛОГІКА АУТЕНТИФІКАЦІЇ ---
         const sendLinkBtn = document.getElementById('send-link-btn');
         const emailInput = document.getElementById('email-input');
         const loginMessage = document.getElementById('login-message');
@@ -146,15 +152,38 @@
                 }).catch(err => loginMessage.textContent = 'Не вдалося надіслати посилання.');
         });
         logoutBtn.addEventListener('click', () => signOut(auth));
+        
         onAuthStateChanged(auth, user => {
             const isLoggedIn = user && allowedEmails.includes(user.email.toLowerCase());
             loginSection.classList.toggle('hidden', isLoggedIn);
             catalogSection.classList.toggle('hidden', !isLoggedIn);
-            if (isLoggedIn) loadTrainers();
+            if (isLoggedIn) {
+                // Завантажуємо тренажери тільки якщо користувач увійшов
+                loadTrainers();
+            } else {
+                 // Очищуємо дані, якщо користувач вийшов
+                allTrainers = [];
+                trainersGrid.innerHTML = '';
+            }
         });
+
+        // Ця частина коду обробляє вхід за посиланням з пошти
         if (isSignInWithEmailLink(auth, window.location.href)) {
-            let email = window.localStorage.getItem('emailForSignIn') || prompt('Введіть вашу пошту для підтвердження.');
-            if (email) signInWithEmailLink(auth, email, window.location.href).then(() => window.localStorage.removeItem('emailForSignIn'));
+            let email = window.localStorage.getItem('emailForSignIn');
+            if (!email) {
+                email = window.prompt('Будь ласка, введіть вашу пошту для підтвердження.');
+            }
+            if (email) {
+                signInWithEmailLink(auth, email, window.location.href)
+                    .then(() => {
+                        window.localStorage.removeItem('emailForSignIn');
+                        // Після успішного входу, onAuthStateChanged автоматично оновить інтерфейс
+                    })
+                    .catch((error) => {
+                        console.error("Помилка входу за посиланням:", error);
+                        loginMessage.textContent = 'Помилка входу. Можливо, посилання застаріле.';
+                    });
+            }
         }
 
         // --- ЛОГІКА КАТАЛОГУ ---
@@ -252,3 +281,4 @@
     </script>
 </body>
 </html>
+
