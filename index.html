@@ -158,10 +158,8 @@
             loginSection.classList.toggle('hidden', isLoggedIn);
             catalogSection.classList.toggle('hidden', !isLoggedIn);
             if (isLoggedIn) {
-                // Завантажуємо тренажери тільки якщо користувач увійшов
                 loadTrainers();
             } else {
-                 // Очищуємо дані, якщо користувач вийшов
                 allTrainers = [];
                 trainersGrid.innerHTML = '';
             }
@@ -170,20 +168,20 @@
         // Ця частина коду обробляє вхід за посиланням з пошти
         if (isSignInWithEmailLink(auth, window.location.href)) {
             let email = window.localStorage.getItem('emailForSignIn');
-            if (!email) {
-                email = window.prompt('Будь ласка, введіть вашу пошту для підтвердження.');
-            }
+            // *** ВИПРАВЛЕНО: Замість prompt(), ми просто перевіряємо, чи існує email ***
             if (email) {
                 signInWithEmailLink(auth, email, window.location.href)
                     .then(() => {
                         window.localStorage.removeItem('emailForSignIn');
-                        // Після успішного входу, onAuthStateChanged автоматично оновить інтерфейс
+                        // Очищаємо параметри з URL, щоб уникнути повторної спроби входу
+                        window.history.replaceState({}, document.title, window.location.pathname);
                     })
                     .catch((error) => {
                         console.error("Помилка входу за посиланням:", error);
                         loginMessage.textContent = 'Помилка входу. Можливо, посилання застаріле.';
                     });
             }
+            // Якщо email не знайдено, нічого не робимо, користувач залишиться на сторінці входу.
         }
 
         // --- ЛОГІКА КАТАЛОГУ ---
