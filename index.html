@@ -34,6 +34,7 @@
             0% { transform: rotate(0deg); } 
             100% { transform: rotate(360deg); } 
         }
+        #image-modal img { user-select: none; }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -62,7 +63,7 @@
                 <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <h1 class="text-3xl font-bold text-gray-900">Каталог тренажерів</h1>
                     <div class="flex items-center gap-4 w-full sm:w-auto">
-                        <input type="text" id="search-input" placeholder="Пошук за назвою або артикулом..." class="block w-full sm:w-64 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <input type="text" id="search-input" placeholder="Пошук за назвою або №..." class="block w-full sm:w-64 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                         <button id="logout-btn" class="bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600 flex-shrink-0">Вийти</button>
                     </div>
                 </div>
@@ -74,11 +75,22 @@
         </div>
     </div>
 
+    <!-- Модальне вікно для перегляду зображень -->
+    <div id="image-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4">
+        <span id="close-modal" class="absolute top-4 right-6 text-white text-4xl font-bold cursor-pointer">&times;</span>
+        <div class="relative">
+            <img id="modal-image" src="" class="max-w-[90vw] max-h-[85vh] object-contain">
+            <a id="prev-btn" class="absolute top-1/2 left-0 sm:-left-12 -translate-y-1/2 text-white text-3xl cursor-pointer p-4">&#10094;</a>
+            <a id="next-btn" class="absolute top-1/2 right-0 sm:-right-12 -translate-y-1/2 text-white text-3xl cursor-pointer p-4">&#10095;</a>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
+        // --- КОНФІГУРАЦІЯ ---
         const firebaseConfig = {
             apiKey: "AIzaSyBEESA6qosTRB4m01WXBjyEJL_SJlfP-mo",
             authDomain: "proffitness-gym-catalog.firebaseapp.com",
@@ -87,8 +99,9 @@
             messagingSenderId: "1039559511733",
             appId: "1:1039559511733:web:8d3eeb9faa917b7e10b8fc"
         };
-        
         const allowedEmails = ['v.kovtun.od@gmail.com', 'worker2@example.com']; 
+        const githubRepoUrl = 'https://proffitness.github.io/my-gym-catalog/';
+        // --- КІНЕЦЬ КОНФІГУРАЦІЇ ---
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -100,19 +113,28 @@
         const trainersGrid = document.getElementById('trainers-grid');
         const loginMessage = document.getElementById('login-message');
         const emailForm = document.getElementById('email-form');
-        const loginPrompt = document.getElementById('login-prompt');
         const emailInput = document.getElementById('email-input');
         const sendLinkBtn = document.getElementById('send-link-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const searchInput = document.getElementById('search-input');
+        
+        // Елементи модального вікна
+        const modal = document.getElementById('image-modal');
+        const modalImage = document.getElementById('modal-image');
+        const closeModalBtn = document.getElementById('close-modal');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
 
         let allTrainers = [];
+        let currentPhotos = [];
+        let currentIndex = 0;
 
         const actionCodeSettings = {
             url: window.location.href.split('?')[0],
             handleCodeInApp: true,
         };
 
+        // --- ЛОГІКА АУТЕНТИФІКАЦІЇ ---
         sendLinkBtn.addEventListener('click', () => {
             const email = emailInput.value;
             loginMessage.textContent = '';
@@ -131,54 +153,16 @@
                     window.localStorage.setItem('emailForSignIn', email);
                     loginMessage.classList.remove('text-red-600');
                     loginMessage.classList.add('text-green-600');
-                    loginMessage.textContent = `Посилання для входу надіслано на ${email}. Перевірте вашу пошту.`;
+                    loginMessage.textContent = `Посилання для входу надіслано на ${email}.`;
                     emailForm.classList.add('hidden');
-                    loginPrompt.textContent = "Перевірте вашу пошту";
                 })
                 .catch((error) => {
                     console.error("Помилка відправки посилання:", error);
-                    loginMessage.classList.add('text-red-600');
-                    loginMessage.textContent = 'Не вдалося надіслати посилання. Спробуйте пізніше.';
+                    loginMessage.textContent = 'Не вдалося надіслати посилання.';
                 });
         });
         
-        logoutBtn.addEventListener('click', () => {
-            signOut(auth).then(() => {
-                window.history.replaceState({}, document.title, window.location.pathname);
-            });
-        });
-
-        searchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            const filteredTrainers = allTrainers.filter(trainer => {
-                const nameMatch = trainer.name.toLowerCase().includes(searchTerm);
-                const numberMatch = trainer.number.toString().toLowerCase().includes(searchTerm);
-                return nameMatch || numberMatch;
-            });
-            displayTrainers(filteredTrainers);
-        });
-
-        function handleSignIn() {
-            if (isSignInWithEmailLink(auth, window.location.href)) {
-                let email = window.localStorage.getItem('emailForSignIn');
-                if (!email) {
-                    email = window.prompt('Будь ласка, введіть вашу пошту для підтвердження.');
-                }
-                if (email) {
-                    signInWithEmailLink(auth, email, window.location.href)
-                        .then((result) => {
-                            window.localStorage.removeItem('emailForSignIn');
-                            console.log("Успішний вхід:", result.user.email);
-                            window.history.replaceState({}, document.title, window.location.pathname);
-                        })
-                        .catch((error) => {
-                            console.error("Помилка входу за посиланням:", error);
-                            loginMessage.classList.add('text-red-600');
-                            loginMessage.textContent = 'Помилка входу. Можливо, посилання застаріле або неправильний email.';
-                        });
-                }
-            }
-        }
+        logoutBtn.addEventListener('click', () => signOut(auth).then(() => window.history.replaceState({}, document.title, window.location.pathname)));
 
         onAuthStateChanged(auth, user => {
             if (user && allowedEmails.includes(user.email.toLowerCase())) {
@@ -192,31 +176,29 @@
                 allTrainers = [];
             }
         });
-
+        
+        if (isSignInWithEmailLink(auth, window.location.href)) {
+            let email = window.localStorage.getItem('emailForSignIn') || window.prompt('Будь ласка, введіть вашу пошту для підтвердження.');
+            if (email) {
+                signInWithEmailLink(auth, email, window.location.href)
+                    .then(() => window.localStorage.removeItem('emailForSignIn'))
+                    .catch(error => console.error("Помилка входу:", error));
+            }
+        }
+        
+        // --- ЛОГІКА КАТАЛОГУ І ГАЛЕРЕЇ ---
         async function loadTrainers() {
             loader.classList.remove('hidden');
-            trainersGrid.innerHTML = '';
             try {
                 const querySnapshot = await getDocs(collection(db, "trainers"));
                 const trainers = [];
-                querySnapshot.forEach((doc) => {
-                    trainers.push(doc.data());
-                });
-
-                trainers.sort((a, b) => {
-                    const numA = parseInt(a.number, 10);
-                    const numB = parseInt(b.number, 10);
-                    if (isNaN(numA)) return 1;
-                    if (isNaN(numB)) return -1;
-                    return numA - numB;
-                });
-                
+                querySnapshot.forEach((doc) => trainers.push(doc.data()));
+                trainers.sort((a, b) => parseInt(a.number, 10) - parseInt(b.number, 10));
                 allTrainers = trainers;
                 displayTrainers(allTrainers);
-
             } catch (error) {
-                console.error("Помилка завантаження даних з Firestore: ", error);
-                trainersGrid.innerHTML = `<p class="col-span-full text-center text-red-500">Не вдалося завантажити дані. Повідомлення про помилку: ${error.message}</p>`;
+                console.error("Помилка завантаження даних: ", error);
+                trainersGrid.innerHTML = `<p class="col-span-full text-center text-red-500">Не вдалося завантажити дані.</p>`;
             } finally {
                 loader.classList.add('hidden');
             }
@@ -227,28 +209,55 @@
                 trainersGrid.innerHTML = `<p class="col-span-full text-center text-lg mt-10">Тренажери не знайдено.</p>`;
                 return;
             }
-
-            const githubRepoUrl = 'https://proffitness.github.io/my-gym-catalog/';
-            const trainersHTML = trainers.map(trainer => {
+            trainersGrid.innerHTML = trainers.map(trainer => {
                 const mainImage = trainer.photos && trainer.photos.length > 0 ? `${githubRepoUrl}${trainer.photos[0].url.replace('./', '')}` : 'https://placehold.co/600x400/e2e8f0/e2e8f0?text=...';
-                const albumLink = `https://github.com/Proffitness/my-gym-catalog/tree/main/images/${trainer.number}`;
-                
+                const photosJson = JSON.stringify(trainer.photos).replace(/"/g, '&quot;');
                 return `
-                <a href="${albumLink}" target="_blank" rel="noopener noreferrer" class="card bg-white rounded-lg shadow-md overflow-hidden block">
-                    <img src="${mainImage}" alt="${trainer.name}" class="w-full h-48 object-cover" onerror="this.src='https://placehold.co/600x400?text=Error'">
-                    <div class="p-4">
-                        <h2 class="text-lg font-semibold h-24">${trainer.name}</h2>
-                        <p class="text-sm text-gray-500 mt-2">Артикул: ${trainer.number}</p>
-                    </div>
-                </a>
-                `;
+                <div class="card bg-white rounded-lg shadow-md overflow-hidden relative p-4" onclick='openModal(${photosJson}, 0)'>
+                    <div class="absolute top-2 left-2 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full">№ ${trainer.number}</div>
+                    <h2 class="text-lg font-semibold mt-8 mb-4 h-20">${trainer.name}</h2>
+                    <img src="${mainImage}" alt="${trainer.name}" class="w-full h-48 object-contain" onerror="this.src='https://placehold.co/600x400?text=Error'">
+                </div>`;
             }).join('');
-            trainersGrid.innerHTML = trainersHTML;
         }
 
-        handleSignIn();
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = allTrainers.filter(t => t.name.toLowerCase().includes(searchTerm) || t.number.toString().includes(searchTerm));
+            displayTrainers(filtered);
+        });
+
+        // Глобальні функції для доступу з onclick
+        window.openModal = (photos, index) => {
+            if (!photos || photos.length === 0) return;
+            currentPhotos = photos;
+            currentIndex = index;
+            updateModalImage();
+            modal.classList.remove('hidden');
+        }
+
+        function updateModalImage() {
+            const photoUrl = `${githubRepoUrl}${currentPhotos[currentIndex].url.replace('./', '')}`;
+            modalImage.src = photoUrl;
+            prevBtn.classList.toggle('hidden', currentPhotos.length <= 1);
+            nextBtn.classList.toggle('hidden', currentPhotos.length <= 1);
+        }
+
+        function changePhoto(step) {
+            currentIndex = (currentIndex + step + currentPhotos.length) % currentPhotos.length;
+            updateModalImage();
+        }
+
+        closeModalBtn.addEventListener('click', () => modal.classList.add('hidden'));
+        prevBtn.addEventListener('click', e => { e.stopPropagation(); changePhoto(-1); });
+        nextBtn.addEventListener('click', e => { e.stopPropagation(); changePhoto(1); });
+        document.addEventListener('keydown', e => e.key === "Escape" && modal.classList.add('hidden'));
+
     </script>
 </body>
 </html>
+
+
+
 
 
