@@ -2,18 +2,15 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <!-- *** ФІНАЛЬНЕ ВИПРАВЛЕННЯ: Додано https://www.gstatic.com до директиви connect-src *** -->
     <meta http-equiv="Content-Security-Policy" content="
-        script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://www.gstatic.com https://www.google.com https://recaptcha.net; 
-        frame-src 'self' https://www.google.com https://recaptcha.net; 
-        connect-src 'self' https://identitytoolkit.googleapis.com https://www.google.com https://www.gstatic.com;
+        script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://www.gstatic.com https://*.firebaseapp.com;
+        connect-src 'self' https://identitytoolkit.googleapis.com https://www.googleapis.com;
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
         font-src 'self' https://fonts.gstatic.com;
         img-src 'self' https://placehold.co data:;
     ">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Каталог тренажерів</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💪</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -31,23 +28,15 @@
     <div id="login-section" class="min-h-screen flex items-center justify-center p-4">
         <div class="w-full max-w-md bg-white rounded-lg shadow-md p-8">
             <h1 class="text-2xl font-bold text-center mb-2">Вхід до каталогу</h1>
-            <p class="text-center text-gray-600 mb-6">Введіть ваш номер телефону для автентифікації.</p>
+            <p id="login-prompt" class="text-center text-gray-600 mb-6">Введіть вашу пошту, щоб отримати посилання для входу.</p>
             
-            <div id="phone-form">
-                <label for="phone-number" class="block text-sm font-medium text-gray-700">Номер телефону</label>
-                <input type="tel" id="phone-number" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="+380991234567">
-                <button id="send-code-btn" class="mt-4 w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Надіслати код</button>
-            </div>
-
-            <div id="code-form" class="hidden">
-                 <p id="code-sent-message" class="mb-4 text-center text-green-600 text-sm"></p>
-                <label for="verification-code" class="block text-sm font-medium text-gray-700">Код з SMS</label>
-                <input type="text" id="verification-code" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="123456">
-                <button id="verify-code-btn" class="mt-4 w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Підтвердити</button>
+            <div id="email-form">
+                <label for="email-input" class="block text-sm font-medium text-gray-700">Email</label>
+                <input type="email" id="email-input" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="your.email@example.com">
+                <button id="send-link-btn" class="mt-4 w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Надіслати посилання</button>
             </div>
             
-            <p id="login-error" class="mt-4 text-center text-red-600 text-sm"></p>
-            <div id="recaptcha-container" class="mt-4"></div>
+            <p id="login-message" class="mt-4 text-center text-sm"></p>
         </div>
     </div>
 
@@ -66,7 +55,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+        import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
         import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
         
         // --- ПОЧАТОК КОНФІГУРАЦІЇ ---
@@ -80,7 +69,8 @@
             appId: "1:1039559511733:web:8d3eeb9faa917b7e10b8fc"
         };
         
-        const allowedPhoneNumbers = ['+380503922270', '+380666520034']; 
+        // !!! ВАЖЛИВО: Вкажіть тут пошти працівників, які мають доступ !!!
+        const allowedEmails = ['v.kovtun.od@gmail.com', 'worker2@example.com']; 
 
         // --- КІНЕЦЬ КОНФІГУРАЦІЇ ---
 
@@ -92,69 +82,72 @@
         const catalogSection = document.getElementById('catalog-section');
         const loader = document.getElementById('loader');
         const trainersGrid = document.getElementById('trainers-grid');
-        const loginError = document.getElementById('login-error');
-        const phoneForm = document.getElementById('phone-form');
-        const codeForm = document.getElementById('code-form');
-        const codeSentMessage = document.getElementById('code-sent-message');
-        const phoneNumberInput = document.getElementById('phone-number');
-        const sendCodeBtn = document.getElementById('send-code-btn');
-        const verificationCodeInput = document.getElementById('verification-code');
-        const verifyCodeBtn = document.getElementById('verify-code-btn');
+        const loginMessage = document.getElementById('login-message');
+        const emailForm = document.getElementById('email-form');
+        const loginPrompt = document.getElementById('login-prompt');
+        const emailInput = document.getElementById('email-input');
+        const sendLinkBtn = document.getElementById('send-link-btn');
         const logoutBtn = document.getElementById('logout-btn');
 
-        function setupRecaptcha() {
-            if (window.recaptchaVerifier) {
-                window.recaptchaVerifier.clear();
-            }
-            window.recaptchaVerifier = new RecaptchaVerifier('recaptcha-container', {
-                'size': 'invisible',
-                'callback': (response) => {}
-            }, auth);
-        }
+        const actionCodeSettings = {
+            url: window.location.href,
+            handleCodeInApp: true,
+        };
 
-        sendCodeBtn.addEventListener('click', () => {
-            const phoneNumber = phoneNumberInput.value;
-            loginError.textContent = '';
+        sendLinkBtn.addEventListener('click', () => {
+            const email = emailInput.value;
+            loginMessage.textContent = '';
 
-            if (!allowedPhoneNumbers.includes(phoneNumber)) {
-                loginError.textContent = 'Цей номер телефону не має доступу.';
+            if (!allowedEmails.includes(email.toLowerCase())) {
+                loginMessage.classList.add('text-red-600');
+                loginMessage.textContent = 'Ця пошта не має доступу.';
                 return;
             }
             
-            signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier)
-                .then((confirmationResult) => {
-                    window.confirmationResult = confirmationResult;
-                    phoneForm.classList.add('hidden');
-                    codeForm.classList.remove('hidden');
-                    codeSentMessage.textContent = `Код підтвердження надіслано на номер ${phoneNumber}.`;
-                }).catch((error) => {
-                    console.error("Помилка відправки SMS:", error);
-                    loginError.textContent = 'Помилка відправки коду. Перевірте консоль (F12) для деталей.';
-                    setupRecaptcha();
+            sendSignInLinkToEmail(auth, email, actionCodeSettings)
+                .then(() => {
+                    window.localStorage.setItem('emailForSignIn', email);
+                    loginMessage.classList.remove('text-red-600');
+                    loginMessage.classList.add('text-green-600');
+                    loginMessage.textContent = `Посилання для входу надіслано на ${email}. Перевірте вашу пошту.`;
+                    emailForm.classList.add('hidden');
+                    loginPrompt.textContent = "Перевірте вашу пошту";
+                })
+                .catch((error) => {
+                    console.error("Помилка відправки посилання:", error);
+                    loginMessage.classList.add('text-red-600');
+                    loginMessage.textContent = 'Не вдалося надіслати посилання. Спробуйте пізніше.';
                 });
-        });
-
-        verifyCodeBtn.addEventListener('click', () => {
-            const code = verificationCodeInput.value;
-            loginError.textContent = '';
-            
-            if (!window.confirmationResult) return;
-            
-            window.confirmationResult.confirm(code).then((result) => {
-                const user = result.user;
-                console.log("Успішний вхід:", user.phoneNumber);
-            }).catch((error) => {
-                console.error("Помилка верифікації коду:", error);
-                loginError.textContent = 'Неправильний код підтвердження.';
-            });
         });
         
         logoutBtn.addEventListener('click', () => {
             signOut(auth);
         });
 
+        function handleSignIn() {
+            if (isSignInWithEmailLink(auth, window.location.href)) {
+                let email = window.localStorage.getItem('emailForSignIn');
+                if (!email) {
+                    email = window.prompt('Будь ласка, введіть вашу пошту для підтвердження.');
+                }
+                
+                signInWithEmailLink(auth, email, window.location.href)
+                    .then((result) => {
+                        window.localStorage.removeItem('emailForSignIn');
+                        console.log("Успішний вхід:", result.user.email);
+                        // URL очищається від параметрів входу
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    })
+                    .catch((error) => {
+                        console.error("Помилка входу за посиланням:", error);
+                        loginMessage.classList.add('text-red-600');
+                        loginMessage.textContent = 'Помилка входу. Можливо, посилання застаріле.';
+                    });
+            }
+        }
+
         onAuthStateChanged(auth, user => {
-            if (user && allowedPhoneNumbers.includes(user.phoneNumber)) {
+            if (user && allowedEmails.includes(user.email.toLowerCase())) {
                 loginSection.classList.add('hidden');
                 catalogSection.classList.remove('hidden');
                 loadTrainers();
@@ -162,7 +155,6 @@
                 loginSection.classList.remove('hidden');
                 catalogSection.classList.add('hidden');
                 trainersGrid.innerHTML = '';
-                setupRecaptcha();
             }
         });
 
@@ -213,9 +205,14 @@
             }).join('');
             trainersGrid.innerHTML = trainersHTML;
         }
+
+        // Запускаємо перевірку посилання при завантаженні сторінки
+        handleSignIn();
     </script>
 </body>
 </html>
+
+
 
 
 
