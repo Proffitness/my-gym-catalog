@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="
         script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://www.gstatic.com https://*.firebaseapp.com;
-        connect-src 'self' https://identitytoolkit.googleapis.com https://www.googleapis.com;
+        connect-src 'self' https://identitytoolkit.googleapis.com https://www.googleapis.com https://firestore.googleapis.com;
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
         font-src 'self' https://fonts.gstatic.com;
-        img-src 'self' https://placehold.co data:;
+        img-src 'self' https://proffitness.github.io https://placehold.co data:;
     ">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Каталог тренажерів</title>
@@ -54,25 +54,21 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-        import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+        // Використовуємо новіші версії бібліотек Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
-        // --- ПОЧАТОК КОНФІГУРАЦІЇ ---
-
         const firebaseConfig = {
             apiKey: "AIzaSyBEESA6qosTRB4m01WXBjyEJL_SJlfP-mo",
             authDomain: "proffitness-gym-catalog.firebaseapp.com",
             projectId: "proffitness-gym-catalog",
-            storageBucket: "proffitness-gym-catalog.firebasestorage.app",
+            storageBucket: "proffitness-gym-catalog.appspot.com", // Змінено на .appspot.com
             messagingSenderId: "1039559511733",
             appId: "1:1039559511733:web:8d3eeb9faa917b7e10b8fc"
         };
         
-        // !!! ВАЖЛИВО: Вкажіть тут пошти працівників, які мають доступ !!!
         const allowedEmails = ['v.kovtun.od@gmail.com', 'worker2@example.com']; 
-
-        // --- КІНЕЦЬ КОНФІГУРАЦІЇ ---
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -90,13 +86,19 @@
         const logoutBtn = document.getElementById('logout-btn');
 
         const actionCodeSettings = {
-            url: window.location.href,
+            url: window.location.href.split('?')[0], // Видаляємо параметри, щоб посилання було чистим
             handleCodeInApp: true,
         };
 
         sendLinkBtn.addEventListener('click', () => {
             const email = emailInput.value;
             loginMessage.textContent = '';
+
+            if (!email) {
+                 loginMessage.classList.add('text-red-600');
+                 loginMessage.textContent = 'Будь ласка, введіть email.';
+                 return;
+            }
 
             if (!allowedEmails.includes(email.toLowerCase())) {
                 loginMessage.classList.add('text-red-600');
@@ -121,7 +123,10 @@
         });
         
         logoutBtn.addEventListener('click', () => {
-            signOut(auth);
+            signOut(auth).then(() => {
+                // Очищуємо URL при виході
+                window.history.replaceState({}, document.title, window.location.pathname);
+            });
         });
 
         function handleSignIn() {
@@ -131,18 +136,20 @@
                     email = window.prompt('Будь ласка, введіть вашу пошту для підтвердження.');
                 }
                 
-                signInWithEmailLink(auth, email, window.location.href)
-                    .then((result) => {
-                        window.localStorage.removeItem('emailForSignIn');
-                        console.log("Успішний вхід:", result.user.email);
-                        // URL очищається від параметрів входу
-                        window.history.replaceState({}, document.title, window.location.pathname);
-                    })
-                    .catch((error) => {
-                        console.error("Помилка входу за посиланням:", error);
-                        loginMessage.classList.add('text-red-600');
-                        loginMessage.textContent = 'Помилка входу. Можливо, посилання застаріле.';
-                    });
+                if (email) {
+                    signInWithEmailLink(auth, email, window.location.href)
+                        .then((result) => {
+                            window.localStorage.removeItem('emailForSignIn');
+                            console.log("Успішний вхід:", result.user.email);
+                            // URL очищається від параметрів входу
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                        })
+                        .catch((error) => {
+                            console.error("Помилка входу за посиланням:", error);
+                            loginMessage.classList.add('text-red-600');
+                            loginMessage.textContent = 'Помилка входу. Можливо, посилання застаріле або неправильний email.';
+                        });
+                }
             }
         }
 
@@ -171,6 +178,8 @@
                 trainers.sort((a, b) => {
                     const numA = parseInt(a.number, 10);
                     const numB = parseInt(b.number, 10);
+                    if (isNaN(numA)) return 1;
+                    if (isNaN(numB)) return -1;
                     return numA - numB;
                 });
                 
@@ -178,7 +187,7 @@
 
             } catch (error) {
                 console.error("Помилка завантаження даних з Firestore: ", error);
-                trainersGrid.innerHTML = `<p class="col-span-full text-center text-red-500">Не вдалося завантажити дані.</p>`;
+                trainersGrid.innerHTML = `<p class="col-span-full text-center text-red-500">Не вдалося завантажити дані. Повідомлення про помилку: ${error.message}</p>`;
             } finally {
                 loader.classList.add('hidden');
             }
@@ -186,12 +195,14 @@
 
         function displayTrainers(trainers) {
             if (trainers.length === 0) {
-                trainersGrid.innerHTML = `<p class="col-span-full text-center">Тренажери не знайдено.</p>`;
+                trainersGrid.innerHTML = `<p class="col-span-full text-center text-lg mt-10">Тренажери не знайдено. <br>Можливо, дані ще не завантажені, або правила безпеки Firestore не налаштовані.</p>`;
                 return;
             }
 
+            const githubRepoUrl = 'https://proffitness.github.io/my-gym-catalog/';
             const trainersHTML = trainers.map(trainer => {
-                const mainImage = trainer.photos && trainer.photos.length > 0 ? trainer.photos[0].url : 'https://placehold.co/600x400/e2e8f0/e2e8f0?text=...';
+                // Виправляємо шлях до зображення
+                const mainImage = trainer.photos && trainer.photos.length > 0 ? `${githubRepoUrl}${trainer.photos[0].url.replace('./', '')}` : 'https://placehold.co/600x400/e2e8f0/e2e8f0?text=...';
                 
                 return `
                 <div class="card bg-white rounded-lg shadow-md overflow-hidden">
@@ -211,6 +222,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
