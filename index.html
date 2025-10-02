@@ -30,7 +30,7 @@
             height: 60px; 
             animation: spin 1s linear infinite; 
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(3зд60deg); } }
         .modal-content { max-height: 90vh; }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -185,10 +185,10 @@
                 const photosJson = JSON.stringify(trainer.photos);
 
                 return `
-                <div class="card bg-white rounded-lg shadow-md overflow-hidden p-4 flex flex-col" 
+                <div class="card bg-white rounded-lg shadow-md overflow-hidden p-4 flex flex-col relative" 
                      onclick='window.showGallery("${trainerNameEscaped}", ${photosJson})'>
                     <div class="flex-shrink-0">
-                        <div class="absolute top-2 left-2 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full">№ ${trainer.number}</div>
+                        <div class="absolute top-4 left-4 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full z-10">№ ${trainer.number}</div>
                         <h2 class="text-lg font-semibold mt-8 mb-4 min-h-[5rem]">${trainer.name}</h2>
                     </div>
                     <div class="flex-grow flex items-center justify-center">
@@ -252,7 +252,4 @@
     </script>
 </body>
 </html>
-
-
-
 
