@@ -19,7 +19,7 @@
             cursor: pointer;
         }
         .card:hover { 
-            transform: translateY(-px); 
+            transform: translateY(-5px); 
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); 
         }
         .loader { 
@@ -151,19 +151,18 @@
                 .then(() => {
                     window.localStorage.setItem('emailForSignIn', email);
                     loginMessage.textContent = `Посилання для входу надіслано на ${email}.`;
-
-                    // *** NEW: Start polling for login completion from the other tab ***
-                    const loginPoll = setInterval(() => {
-                        if (localStorage.getItem('loginComplete') === 'true') {
-                            localStorage.removeItem('loginComplete');
-                            clearInterval(loginPoll);
-                            window.location.reload();
-                        }
-                    }, 1000); // Check every second
                 }).catch(err => loginMessage.textContent = 'Не вдалося надіслати посилання.');
         });
         
         logoutBtn.addEventListener('click', () => signOut(auth));
+
+        // *** NEW: More reliable cross-tab communication using 'storage' event ***
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'loginComplete' && event.newValue === 'true') {
+                localStorage.removeItem('loginComplete');
+                window.location.reload();
+            }
+        });
         
         if (isSignInWithEmailLink(auth, window.location.href)) {
             let email = window.localStorage.getItem('emailForSignIn');
@@ -175,13 +174,10 @@
                 signInWithEmailLink(auth, email, window.location.href)
                     .then(() => {
                         window.localStorage.removeItem('emailForSignIn');
-                        
-                        // *** NEW: Signal the original tab and close this one ***
                         localStorage.setItem('loginComplete', 'true');
                         
-                        // Provide a fallback message and close the tab
                         loginPrompt.textContent = 'Вхід успішний! Ця вкладка зараз закриється.';
-                        setTimeout(() => window.close(), 1000); // Close after 1 second
+                        setTimeout(() => window.close(), 1000);
                     })
                     .catch((error) => {
                         console.error("Помилка входу за посиланням:", error);
@@ -314,6 +310,7 @@
     </script>
 </body>
 </html>
+
 
 
 
