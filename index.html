@@ -147,10 +147,8 @@
         const emailForm = document.getElementById('email-form');
         const actionCodeSettings = { url: window.location.href.split('?')[0], handleCodeInApp: true, };
         
-        // --- NEW: Determine the tab's role early ---
         const isSignInRedirect = isSignInWithEmailLink(auth, window.location.href);
 
-        // This block runs ONLY in the tab opened from the email link.
         if (isSignInRedirect) {
             catalogSection.style.display = 'none';
             loginSection.style.display = 'flex';
@@ -167,7 +165,15 @@
                         localStorage.setItem('loginComplete', 'true');
                         
                         loginPrompt.textContent = 'Вхід успішний!';
-                        loginMessage.innerHTML = 'Будь ласка, поверніться до оригінальної вкладки каталогу.<br>Цю сторінку можна закрити.';
+                        loginMessage.innerHTML = `<p class="mb-4 text-gray-600">Ваш вхід підтверджено. Оригінальна вкладка каталогу вже оновлена.</p>
+                                                  <button id="return-btn" class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Повернутись до каталогу</button>`;
+                        
+                        const returnBtn = document.getElementById('return-btn');
+                        if (returnBtn) {
+                            returnBtn.addEventListener('click', () => {
+                                window.close();
+                            });
+                        }
                     })
                     .catch((error) => {
                         console.error("Помилка входу за посиланням:", error);
@@ -180,7 +186,6 @@
                  loginMessage.textContent = 'Не вдалося завершити вхід. Спробуйте знову з оригінальної вкладки.';
             }
         } 
-        // This block runs ONLY in the original, main tab.
         else {
             sendLinkBtn.addEventListener('click', () => {
                 const email = emailInput.value;
@@ -354,13 +359,6 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
 
 
 
