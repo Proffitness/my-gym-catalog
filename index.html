@@ -147,60 +147,14 @@
         const emailForm = document.getElementById('email-form');
         const actionCodeSettings = { url: window.location.href.split('?')[0], handleCodeInApp: true, };
         
-        sendLinkBtn.addEventListener('click', () => {
-            const email = emailInput.value;
-            if (!email) { 
-                loginMessage.textContent = 'Будь ласка, введіть email.'; 
-                return; 
-            }
-            if (!allowedEmails.includes(email.toLowerCase())) { 
-                loginMessage.textContent = 'Ця пошта не має доступу.'; 
-                return; 
-            }
+        // --- NEW: Determine the tab's role early ---
+        const isSignInRedirect = isSignInWithEmailLink(auth, window.location.href);
 
-            sendLinkBtn.disabled = true;
-            sendLinkBtn.textContent = 'Надсилаємо...';
+        // This block runs ONLY in the tab opened from the email link.
+        if (isSignInRedirect) {
+            catalogSection.style.display = 'none';
+            loginSection.style.display = 'flex';
 
-            sendSignInLinkToEmail(auth, email, actionCodeSettings)
-                .then(() => {
-                    window.localStorage.setItem('emailForSignIn', email);
-                    loginMessage.textContent = `Посилання надіслано на ${email}. Перевірте пошту.`;
-
-                    // --- REDIRECT TO MAIL CLIENT ---
-                    const domain = email.split('@')[1];
-                    let mailUrl = '';
-
-                    if (domain === 'gmail.com') {
-                        mailUrl = 'https://mail.google.com/';
-                    } else if (['outlook.com', 'hotmail.com', 'live.com'].includes(domain)) {
-                        mailUrl = 'https://outlook.live.com/';
-                    } else if (domain === 'yahoo.com') {
-                        mailUrl = 'https://mail.yahoo.com/';
-                    }
-                    
-                    if (mailUrl) {
-                        setTimeout(() => {
-                            window.open(mailUrl, '_blank');
-                        }, 1500);
-                    }
-                }).catch(err => {
-                    loginMessage.textContent = 'Не вдалося надіслати посилання.';
-                }).finally(() => {
-                    sendLinkBtn.disabled = false;
-                    sendLinkBtn.textContent = 'Надіслати посилання';
-                });
-        });
-        
-        logoutBtn.addEventListener('click', () => signOut(auth));
-
-        window.addEventListener('storage', (event) => {
-            if (event.key === 'loginComplete' && event.newValue === 'true') {
-                localStorage.removeItem('loginComplete');
-                window.location.reload();
-            }
-        });
-        
-        if (isSignInWithEmailLink(auth, window.location.href)) {
             let email = window.localStorage.getItem('emailForSignIn');
             if (email) {
                 loginPrompt.textContent = 'Хвилинку, виконується вхід...';
@@ -212,11 +166,8 @@
                         window.localStorage.removeItem('emailForSignIn');
                         localStorage.setItem('loginComplete', 'true');
                         
-                        // --- IMPROVED MESSAGING ---
-                        loginPrompt.textContent = 'Вхід успішний! Оригінальна вкладка каталогу оновиться.';
-                        loginMessage.innerHTML = 'Ви можете закрити цю сторінку.';
-                        
-                        setTimeout(() => window.close(), 2000); // Try to close
+                        loginPrompt.textContent = 'Вхід успішний!';
+                        loginMessage.innerHTML = 'Будь ласка, поверніться до оригінальної вкладки каталогу.<br>Цю сторінку можна закрити.';
                     })
                     .catch((error) => {
                         console.error("Помилка входу за посиланням:", error);
@@ -226,23 +177,77 @@
                         localStorage.removeItem('loginComplete');
                     });
             } else {
-                 loginMessage.textContent = 'Не вдалося завершити вхід. Спробуйте знову.';
+                 loginMessage.textContent = 'Не вдалося завершити вхід. Спробуйте знову з оригінальної вкладки.';
             }
+        } 
+        // This block runs ONLY in the original, main tab.
+        else {
+            sendLinkBtn.addEventListener('click', () => {
+                const email = emailInput.value;
+                if (!email) { 
+                    loginMessage.textContent = 'Будь ласка, введіть email.'; 
+                    return; 
+                }
+                if (!allowedEmails.includes(email.toLowerCase())) { 
+                    loginMessage.textContent = 'Ця пошта не має доступу.'; 
+                    return; 
+                }
+
+                sendLinkBtn.disabled = true;
+                sendLinkBtn.textContent = 'Надсилаємо...';
+
+                sendSignInLinkToEmail(auth, email, actionCodeSettings)
+                    .then(() => {
+                        window.localStorage.setItem('emailForSignIn', email);
+                        loginMessage.textContent = `Посилання надіслано на ${email}. Перевірте пошту.`;
+
+                        const domain = email.split('@')[1];
+                        let mailUrl = '';
+
+                        if (domain === 'gmail.com') {
+                            mailUrl = 'https://mail.google.com/';
+                        } else if (['outlook.com', 'hotmail.com', 'live.com'].includes(domain)) {
+                            mailUrl = 'https://outlook.live.com/';
+                        } else if (domain === 'yahoo.com') {
+                            mailUrl = 'https://mail.yahoo.com/';
+                        }
+                        
+                        if (mailUrl) {
+                            setTimeout(() => {
+                                window.open(mailUrl, '_blank');
+                            }, 1500);
+                        }
+                    }).catch(err => {
+                        loginMessage.textContent = 'Не вдалося надіслати посилання.';
+                    }).finally(() => {
+                        sendLinkBtn.disabled = false;
+                        sendLinkBtn.textContent = 'Надіслати посилання';
+                    });
+            });
+        
+            logoutBtn.addEventListener('click', () => signOut(auth));
+
+            window.addEventListener('storage', (event) => {
+                if (event.key === 'loginComplete' && event.newValue === 'true') {
+                    localStorage.removeItem('loginComplete');
+                    window.location.reload();
+                }
+            });
+            
+            onAuthStateChanged(auth, user => {
+                const isLoggedIn = user && allowedEmails.includes(user.email.toLowerCase());
+                loginSection.classList.toggle('hidden', isLoggedIn);
+                catalogSection.classList.toggle('hidden', !isLoggedIn);
+                if (isLoggedIn) {
+                    loadTrainers();
+                } else {
+                    allTrainers = [];
+                    trainersGrid.innerHTML = '';
+                }
+            });
         }
 
-        onAuthStateChanged(auth, user => {
-            const isLoggedIn = user && allowedEmails.includes(user.email.toLowerCase());
-            loginSection.classList.toggle('hidden', isLoggedIn);
-            catalogSection.classList.toggle('hidden', !isLoggedIn);
-            if (isLoggedIn) {
-                loadTrainers();
-            } else {
-                allTrainers = [];
-                trainersGrid.innerHTML = '';
-            }
-        });
-
-        // --- CATALOG LOGIC ---
+        // --- CATALOG LOGIC (remains accessible to both) ---
         async function loadTrainers() {
             if (allTrainers.length > 0) {
                 displayTrainers(allTrainers);
@@ -349,6 +354,9 @@
     </script>
 </body>
 </html>
+
+
+
 
 
 
