@@ -19,7 +19,7 @@
             cursor: pointer;
         }
         .card:hover { 
-            transform: translateY(-5px); 
+            transform: translateY(-px); 
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); 
         }
         .loader { 
@@ -151,32 +151,44 @@
                 .then(() => {
                     window.localStorage.setItem('emailForSignIn', email);
                     loginMessage.textContent = `Посилання для входу надіслано на ${email}.`;
+
+                    // *** NEW: Start polling for login completion from the other tab ***
+                    const loginPoll = setInterval(() => {
+                        if (localStorage.getItem('loginComplete') === 'true') {
+                            localStorage.removeItem('loginComplete');
+                            clearInterval(loginPoll);
+                            window.location.reload();
+                        }
+                    }, 1000); // Check every second
                 }).catch(err => loginMessage.textContent = 'Не вдалося надіслати посилання.');
         });
         
         logoutBtn.addEventListener('click', () => signOut(auth));
         
-        // *** IMPROVEMENT: Check for sign-in link immediately on page load to provide a smoother experience ***
         if (isSignInWithEmailLink(auth, window.location.href)) {
             let email = window.localStorage.getItem('emailForSignIn');
             if (email) {
-                // Temporarily hide form and show a message while signing in
                 loginPrompt.textContent = 'Хвилинку, виконується вхід...';
                 emailForm.classList.add('hidden');
                 loginMessage.textContent = ''; 
 
                 signInWithEmailLink(auth, email, window.location.href)
                     .then(() => {
-                        // Successful sign-in will trigger onAuthStateChanged, which will hide the whole login section.
                         window.localStorage.removeItem('emailForSignIn');
-                        window.history.replaceState({}, document.title, window.location.pathname);
+                        
+                        // *** NEW: Signal the original tab and close this one ***
+                        localStorage.setItem('loginComplete', 'true');
+                        
+                        // Provide a fallback message and close the tab
+                        loginPrompt.textContent = 'Вхід успішний! Ця вкладка зараз закриється.';
+                        setTimeout(() => window.close(), 1000); // Close after 1 second
                     })
                     .catch((error) => {
                         console.error("Помилка входу за посиланням:", error);
-                        // Restore login form on error
                         loginPrompt.textContent = 'Введіть вашу пошту, щоб отримати посилання для входу.';
                         emailForm.classList.remove('hidden');
                         loginMessage.textContent = 'Помилка входу. Можливо, посилання застаріле.';
+                        localStorage.removeItem('loginComplete');
                     });
             } else {
                  loginMessage.textContent = 'Не вдалося завершити вхід. Спробуйте знову.';
