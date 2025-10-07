@@ -150,6 +150,7 @@
         const isSignInRedirect = isSignInWithEmailLink(auth, window.location.href);
 
         if (isSignInRedirect) {
+            // This tab is the one opened from the email link. Its only job is to sign in and then become the new catalog page.
             catalogSection.style.display = 'none';
             loginSection.style.display = 'flex';
 
@@ -162,31 +163,23 @@
                 signInWithEmailLink(auth, email, window.location.href)
                     .then(() => {
                         window.localStorage.removeItem('emailForSignIn');
+                        // Signal the other tab to close
                         localStorage.setItem('loginComplete', 'true');
-                        
-                        loginPrompt.textContent = 'Вхід успішний!';
-                        loginMessage.innerHTML = `<p class="mb-4 text-gray-600">Ваш вхід підтверджено. Оригінальна вкладка каталогу вже оновлена.</p>
-                                                  <button id="return-btn" class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Повернутись до каталогу</button>`;
-                        
-                        const returnBtn = document.getElementById('return-btn');
-                        if (returnBtn) {
-                            returnBtn.addEventListener('click', () => {
-                                window.close();
-                            });
-                        }
+                        // Then, this tab becomes the catalog
+                        window.location.href = window.location.href.split('?')[0];
                     })
                     .catch((error) => {
                         console.error("Помилка входу за посиланням:", error);
                         loginPrompt.textContent = 'Введіть вашу пошту, щоб отримати посилання для входу.';
                         emailForm.classList.remove('hidden');
                         loginMessage.textContent = 'Помилка входу. Можливо, посилання застаріле.';
-                        localStorage.removeItem('loginComplete');
                     });
             } else {
                  loginMessage.textContent = 'Не вдалося завершити вхід. Спробуйте знову з оригінальної вкладки.';
             }
         } 
         else {
+            // This is the original tab. It handles sending the email and listens for the login signal to close itself.
             sendLinkBtn.addEventListener('click', () => {
                 const email = emailInput.value;
                 if (!email) { 
@@ -232,10 +225,11 @@
         
             logoutBtn.addEventListener('click', () => signOut(auth));
 
+            // This listener waits for the signal from the other tab, then closes this (original) tab.
             window.addEventListener('storage', (event) => {
                 if (event.key === 'loginComplete' && event.newValue === 'true') {
                     localStorage.removeItem('loginComplete');
-                    window.location.reload();
+                    window.close();
                 }
             });
             
@@ -252,7 +246,7 @@
             });
         }
 
-        // --- CATALOG LOGIC (remains accessible to both) ---
+        // --- CATALOG LOGIC ---
         async function loadTrainers() {
             if (allTrainers.length > 0) {
                 displayTrainers(allTrainers);
@@ -359,6 +353,7 @@
     </script>
 </body>
 </html>
+
 
 
 
