@@ -139,7 +139,10 @@
         const sendLinkBtn = document.getElementById('send-link-btn');
         const emailInput = document.getElementById('email-input');
         const loginMessage = document.getElementById('login-message');
+        const loginPrompt = document.getElementById('login-prompt');
+        const emailForm = document.getElementById('email-form');
         const actionCodeSettings = { url: window.location.href.split('?')[0], handleCodeInApp: true, };
+        
         sendLinkBtn.addEventListener('click', () => {
             const email = emailInput.value;
             if (!email) { loginMessage.textContent = 'Будь ласка, введіть email.'; return; }
@@ -150,8 +153,36 @@
                     loginMessage.textContent = `Посилання для входу надіслано на ${email}.`;
                 }).catch(err => loginMessage.textContent = 'Не вдалося надіслати посилання.');
         });
+        
         logoutBtn.addEventListener('click', () => signOut(auth));
         
+        // *** IMPROVEMENT: Check for sign-in link immediately on page load to provide a smoother experience ***
+        if (isSignInWithEmailLink(auth, window.location.href)) {
+            let email = window.localStorage.getItem('emailForSignIn');
+            if (email) {
+                // Temporarily hide form and show a message while signing in
+                loginPrompt.textContent = 'Хвилинку, виконується вхід...';
+                emailForm.classList.add('hidden');
+                loginMessage.textContent = ''; 
+
+                signInWithEmailLink(auth, email, window.location.href)
+                    .then(() => {
+                        // Successful sign-in will trigger onAuthStateChanged, which will hide the whole login section.
+                        window.localStorage.removeItem('emailForSignIn');
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    })
+                    .catch((error) => {
+                        console.error("Помилка входу за посиланням:", error);
+                        // Restore login form on error
+                        loginPrompt.textContent = 'Введіть вашу пошту, щоб отримати посилання для входу.';
+                        emailForm.classList.remove('hidden');
+                        loginMessage.textContent = 'Помилка входу. Можливо, посилання застаріле.';
+                    });
+            } else {
+                 loginMessage.textContent = 'Не вдалося завершити вхід. Спробуйте знову.';
+            }
+        }
+
         onAuthStateChanged(auth, user => {
             const isLoggedIn = user && allowedEmails.includes(user.email.toLowerCase());
             loginSection.classList.toggle('hidden', isLoggedIn);
@@ -163,21 +194,6 @@
                 trainersGrid.innerHTML = '';
             }
         });
-
-        if (isSignInWithEmailLink(auth, window.location.href)) {
-            let email = window.localStorage.getItem('emailForSignIn');
-            if (email) {
-                signInWithEmailLink(auth, email, window.location.href)
-                    .then(() => {
-                        window.localStorage.removeItem('emailForSignIn');
-                        window.history.replaceState({}, document.title, window.location.pathname);
-                    })
-                    .catch((error) => {
-                        console.error("Помилка входу за посиланням:", error);
-                        loginMessage.textContent = 'Помилка входу. Можливо, посилання застаріле.';
-                    });
-            }
-        }
 
         // --- CATALOG LOGIC ---
         async function loadTrainers() {
@@ -203,7 +219,6 @@
         function displayTrainers(trainers) {
             trainersGrid.innerHTML = trainers.map(trainer => {
                 const mainImage = trainer.photos && trainer.photos.length > 0 ? `${githubRepoUrl}${trainer.photos[0].url.replace('./', '')}` : 'https://placehold.co/400x300/e2e8f0/a0aec0?text=No+Image';
-                // *** FIX: Switched from inline 'onclick' to data attributes for reliability ***
                 return `
                 <div class="card bg-white rounded-lg shadow-md overflow-hidden p-4 flex flex-col relative" 
                      data-name='${trainer.name.replace(/'/g, "&apos;").replace(/"/g, "&quot;")}'
@@ -218,7 +233,6 @@
                 </div>`;
             }).join('');
             
-            // *** FIX: Add event listeners programmatically after creating the HTML ***
             addCardListeners();
         }
 
@@ -288,3 +302,6 @@
     </script>
 </body>
 </html>
+
+
+
