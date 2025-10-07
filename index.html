@@ -32,6 +32,10 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .modal-content { max-height: 90vh; }
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -145,18 +149,50 @@
         
         sendLinkBtn.addEventListener('click', () => {
             const email = emailInput.value;
-            if (!email) { loginMessage.textContent = 'Будь ласка, введіть email.'; return; }
-            if (!allowedEmails.includes(email.toLowerCase())) { loginMessage.textContent = 'Ця пошта не має доступу.'; return; }
+            if (!email) { 
+                loginMessage.textContent = 'Будь ласка, введіть email.'; 
+                return; 
+            }
+            if (!allowedEmails.includes(email.toLowerCase())) { 
+                loginMessage.textContent = 'Ця пошта не має доступу.'; 
+                return; 
+            }
+
+            sendLinkBtn.disabled = true;
+            sendLinkBtn.textContent = 'Надсилаємо...';
+
             sendSignInLinkToEmail(auth, email, actionCodeSettings)
                 .then(() => {
                     window.localStorage.setItem('emailForSignIn', email);
-                    loginMessage.textContent = `Посилання для входу надіслано на ${email}.`;
-                }).catch(err => loginMessage.textContent = 'Не вдалося надіслати посилання.');
+                    loginMessage.textContent = `Посилання надіслано на ${email}. Перевірте пошту.`;
+
+                    // --- REDIRECT TO MAIL CLIENT ---
+                    const domain = email.split('@')[1];
+                    let mailUrl = '';
+
+                    if (domain === 'gmail.com') {
+                        mailUrl = 'https://mail.google.com/';
+                    } else if (['outlook.com', 'hotmail.com', 'live.com'].includes(domain)) {
+                        mailUrl = 'https://outlook.live.com/';
+                    } else if (domain === 'yahoo.com') {
+                        mailUrl = 'https://mail.yahoo.com/';
+                    }
+                    
+                    if (mailUrl) {
+                        setTimeout(() => {
+                            window.open(mailUrl, '_blank');
+                        }, 1500);
+                    }
+                }).catch(err => {
+                    loginMessage.textContent = 'Не вдалося надіслати посилання.';
+                }).finally(() => {
+                    sendLinkBtn.disabled = false;
+                    sendLinkBtn.textContent = 'Надіслати посилання';
+                });
         });
         
         logoutBtn.addEventListener('click', () => signOut(auth));
 
-        // *** NEW: More reliable cross-tab communication using 'storage' event ***
         window.addEventListener('storage', (event) => {
             if (event.key === 'loginComplete' && event.newValue === 'true') {
                 localStorage.removeItem('loginComplete');
