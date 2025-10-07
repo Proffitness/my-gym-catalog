@@ -108,7 +108,6 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- ЛОГІКА ДЛЯ ЗБЕРЕЖЕННЯ СЕСІЇ ---
         setPersistence(auth, browserLocalPersistence)
             .catch((error) => {
                 console.error("Помилка налаштування збереження сесії:", error);
@@ -136,7 +135,7 @@
         let currentPhotos = [];
         let currentIndex = 0;
 
-        // --- ЛОГІКА АУТЕНТИФІКАЦІЇ ---
+        // --- AUTHENTICATION LOGIC ---
         const sendLinkBtn = document.getElementById('send-link-btn');
         const emailInput = document.getElementById('email-input');
         const loginMessage = document.getElementById('login-message');
@@ -165,15 +164,12 @@
             }
         });
 
-        // Ця частина коду обробляє вхід за посиланням з пошти
         if (isSignInWithEmailLink(auth, window.location.href)) {
             let email = window.localStorage.getItem('emailForSignIn');
-            // *** ВИПРАВЛЕНО: Замість prompt(), ми просто перевіряємо, чи існує email ***
             if (email) {
                 signInWithEmailLink(auth, email, window.location.href)
                     .then(() => {
                         window.localStorage.removeItem('emailForSignIn');
-                        // Очищаємо параметри з URL, щоб уникнути повторної спроби входу
                         window.history.replaceState({}, document.title, window.location.pathname);
                     })
                     .catch((error) => {
@@ -181,10 +177,9 @@
                         loginMessage.textContent = 'Помилка входу. Можливо, посилання застаріле.';
                     });
             }
-            // Якщо email не знайдено, нічого не робимо, користувач залишиться на сторінці входу.
         }
 
-        // --- ЛОГІКА КАТАЛОГУ ---
+        // --- CATALOG LOGIC ---
         async function loadTrainers() {
             if (allTrainers.length > 0) {
                 displayTrainers(allTrainers);
@@ -207,13 +202,12 @@
 
         function displayTrainers(trainers) {
             trainersGrid.innerHTML = trainers.map(trainer => {
-                const mainImage = trainer.photos && trainer.photos.length > 0 ? `${githubRepoUrl}${trainer.photos[0].url.replace('./', '')}` : '';
-                const trainerNameEscaped = trainer.name.replace(/"/g, '&quot;').replace(/'/g, "\\'");
-                const photosJson = JSON.stringify(trainer.photos);
-
+                const mainImage = trainer.photos && trainer.photos.length > 0 ? `${githubRepoUrl}${trainer.photos[0].url.replace('./', '')}` : 'https://placehold.co/400x300/e2e8f0/a0aec0?text=No+Image';
+                // *** FIX: Switched from inline 'onclick' to data attributes for reliability ***
                 return `
                 <div class="card bg-white rounded-lg shadow-md overflow-hidden p-4 flex flex-col relative" 
-                     onclick='window.showGallery("${trainerNameEscaped}", ${photosJson})'>
+                     data-name='${trainer.name.replace(/'/g, "&apos;").replace(/"/g, "&quot;")}'
+                     data-photos='${JSON.stringify(trainer.photos)}'>
                     <div class="absolute top-4 left-4 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full z-10">№ ${trainer.number}</div>
                     <div class="flex-shrink-0 pt-8">
                         <h2 class="text-lg font-semibold mb-4 min-h-[5rem]">${trainer.name}</h2>
@@ -223,6 +217,19 @@
                     </div>
                 </div>`;
             }).join('');
+            
+            // *** FIX: Add event listeners programmatically after creating the HTML ***
+            addCardListeners();
+        }
+
+        function addCardListeners() {
+            document.querySelectorAll('.card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const trainerName = card.dataset.name;
+                    const photos = JSON.parse(card.dataset.photos);
+                    showGallery(trainerName, photos);
+                });
+            });
         }
 
         searchInput.addEventListener('input', (e) => {
@@ -231,21 +238,24 @@
             displayTrainers(filtered);
         });
 
-        // --- ЛОГІКА ГАЛЕРЕЇ І ЛАЙТБОКСУ ---
-        window.showGallery = (trainerName, photos) => {
+        // --- GALLERY AND LIGHTBOX LOGIC ---
+        function showGallery(trainerName, photos) {
+            if (!photos || !Array.isArray(photos) || photos.length === 0) {
+                return; 
+            }
             galleryTitle.textContent = `Фото: ${trainerName}`;
             galleryGrid.innerHTML = '';
             photos.forEach((photo, index) => {
                 const img = document.createElement('img');
                 img.src = `${githubRepoUrl}${photo.url.replace('./', '')}`;
                 img.className = 'w-full h-32 object-cover rounded-md cursor-pointer hover:opacity-80 transition-opacity';
-                img.onclick = () => window.openLightbox(photos, index);
+                img.onclick = () => openLightbox(photos, index);
                 galleryGrid.appendChild(img);
             });
             galleryModal.classList.remove('hidden');
         }
 
-        window.openLightbox = (photos, index) => {
+        function openLightbox(photos, index) {
             currentPhotos = photos;
             currentIndex = index;
             updateLightboxImage();
@@ -275,8 +285,9 @@
                 lightboxModal.classList.add('hidden');
             }
         });
-
     </script>
 </body>
 </html>
+
+
 
